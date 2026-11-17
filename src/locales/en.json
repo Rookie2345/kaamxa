@@ -31,11 +31,13 @@
     "btn_login": "Log In",
     "btn_signup": "Create Account",
     "btn_google": "Continue with Google",
+    "google_hint": "Google Sign-In is optional. You can sign up and login instantly with Email and Password.",
     "or_divider": "OR",
     "no_account": "Don't have an account? Sign up",
     "have_account": "Already have an account? Log in",
     "auth_error": "Authentication error: ",
     "signup_success": "Account created! Now complete your profile.",
+    "signup_check_email": "Account created! Please verify your email or log in.",
     "login_success": "Logged in successfully!",
     "logging_in": "Please wait...",
     "login_required_desc": "You must log in first to perform this action."
@@ -60,6 +62,8 @@
     "skills_label": "Your Skills & Trades",
     "skills_hint": "Check all the trades you can work in",
     "experience": "Experience (Years)",
+    "bio": "Bio / About You",
+    "bio_placeholder": "Describe your background, specialty, tools, and availability...",
     "save_btn": "Save Profile",
     "saving": "Saving...",
     "success": "Profile updated successfully!",
@@ -157,6 +161,27 @@
     "error_prefix": "Failed to post job: "
   },
 
+  "screening": {
+    "section_title": "Screening Questions (Optional)",
+    "section_subtitle": "Add up to 5 questions to verify skills before hiring. MCQ questions will be scored automatically.",
+    "add_question": "+ Add Question",
+    "use_template": "Add from Template",
+    "templates_available": "Recommended questions for this trade",
+    "select_template": "Select a question template",
+    "close_templates": "Close",
+    "type_mcq": "Multiple Choice (Auto-graded)",
+    "type_text": "Written Answer",
+    "question_label": "Question",
+    "question_placeholder": "e.g. Do you have a valid driving license?",
+    "options_label": "Options (mark the correct one)",
+    "option_placeholder": "Option",
+    "add_option": "+ Add Option",
+    "correct_option": "Correct Answer",
+    "remove_question": "Remove Question",
+    "max_limit": "Maximum 5 questions reached",
+    "validation_error": "Please provide question text and at least 2 options for MCQ."
+  },
+
   "jobs": {
     "title": "Open Jobs in Nepal",
     "all_jobs": "All Jobs",
@@ -174,7 +199,7 @@
     "positions_filled": "filled",
     "apply_now": "Apply Now",
     "share_job": "Share",
-    "report_job": "Report",
+    "report_job": "Report Job",
     "employer_info": "Employer Information",
     "employer_rating": "Rating Avg",
     "employer_completed": "Completed Jobs",
@@ -190,9 +215,131 @@
     "pay": "Pay"
   },
 
+  "apply": {
+    "title": "Apply for Job",
+    "subtitle": "Answer the screening test questions and send your application directly to the employer.",
+    "cover_message": "Message / Note to Employer (Optional)",
+    "cover_placeholder": "Introduce yourself, mention your relevant experience, tools, and availability...",
+    "screening_title": "Screening Questions",
+    "screening_desc": "Please answer the questions below accurately.",
+    "submit_btn": "Submit Application",
+    "submitting": "Submitting...",
+    "success_title": "Application Submitted!",
+    "success_desc": "Your application has been received by the employer. You can track status or chat with the employer in My Jobs.",
+    "already_applied_desc": "You have already applied to this job.",
+    "required_field": "Please answer this question."
+  },
+
+  "applicants": {
+    "title": "Applicants",
+    "empty": "No applicants yet for this job.",
+    "score": "Test Score",
+    "view_answers": "View Test Answers",
+    "hide_answers": "Hide Answers",
+    "shortlist": "Shortlist",
+    "reject": "Reject",
+    "hire": "Hire This Worker",
+    "hired": "Hired",
+    "status_applied": "Applied",
+    "status_shortlisted": "Shortlisted",
+    "status_rejected": "Rejected",
+    "status_hired": "Hired",
+    "confirm_hire_title": "Hire Applicant?",
+    "confirm_hire_desc": "Are you sure you want to hire this worker? This will fill 1 position for this job.",
+    "hire_success": "Worker hired successfully! You can mark the work as completed once finished."
+  },
+
+  "my_jobs": {
+    "title": "My Jobs & Applications",
+    "tab_employer": "Posted Jobs (Employer)",
+    "tab_worker": "My Applications (Worker)",
+    "empty_employer": "You have not posted any jobs yet.",
+    "empty_worker": "You have not applied for any jobs yet.",
+    "view_job": "View Listing",
+    "view_applicants": "Applicants",
+    "complete_work": "Mark as Completed",
+    "leave_review": "Leave a Review",
+    "completed_badge": "Completed",
+    "hire_active": "Work in progress"
+  },
+
+  "chat": {
+    "title": "Messages",
+    "empty_title": "No messages yet",
+    "empty_desc": "When you apply for a job or an employer contacts you, conversations will appear here in real time.",
+    "type_placeholder": "Write a message...",
+    "send": "Send",
+    "regarding_job": "Job",
+    "online": "Active",
+    "read": "Read",
+    "rate_limited": "You are sending messages too fast. Please wait a moment."
+  },
+
+  "reviews": {
+    "title": "Leave a Review",
+    "subtitle": "Share your honest feedback about working together.",
+    "rating_label": "Rating (1 to 5 Stars)",
+    "comment_label": "Comments (Optional)",
+    "comment_placeholder": "How was the work quality, punctuality, and communication?",
+    "submit": "Submit Review",
+    "submitting": "Submitting...",
+    "success": "Review submitted successfully! Thank you for rating.",
+    "already_reviewed": "You have already submitted a review for this job."
+  },
+
+  "reports": {
+    "button": "Report",
+    "title": "Report to Admin",
+    "subtitle": "Help keep KaamXa safe, clean, and fraud-free for all Nepalis.",
+    "reason_label": "Reason for Report",
+    "reason_spam": "Spam or duplicate post",
+    "reason_fake": "Fake listing or false claims",
+    "reason_foreign_job": "Foreign employment / Abroad job (Strictly prohibited)",
+    "reason_asks_money": "Asks workers for money, fees, or deposits (Prohibited)",
+    "reason_abuse": "Abusive, threatening, or offensive content",
+    "reason_other": "Other violation",
+    "details_label": "Additional Details (Optional)",
+    "details_placeholder": "Explain the issue in detail...",
+    "submit": "Submit Report",
+    "submitting": "Submitting...",
+    "success": "Report submitted. Our moderation system will review it."
+  },
+
+  "workers": {
+    "title": "Worker Profile",
+    "headline": "Specialty",
+    "skills": "Skills & Services",
+    "experience": "Experience",
+    "about": "About the Worker",
+    "photos": "Past Work Gallery",
+    "no_photos": "No photos uploaded yet.",
+    "reviews_title": "Reviews & Ratings",
+    "no_reviews": "No reviews yet. Be the first to hire and review!",
+    "chat_cta": "Send Message / Chat",
+    "call_worker": "Call Worker",
+    "upload_photos": "Upload Work Photos (Max 6, under 500 KB)",
+    "photo_added": "Photo uploaded successfully!"
+  },
+
+  "admin": {
+    "title": "Admin Moderation Panel",
+    "subtitle": "Review reported jobs and profiles, and restore or manage flagged content.",
+    "not_admin": "Access Denied. You must be an administrator to view this page.",
+    "tab_jobs": "Flagged / Hidden Jobs",
+    "tab_profiles": "Flagged Profiles",
+    "tab_reports": "Recent Reports Log",
+    "reports_count": "Reports",
+    "restore": "Restore & Clear Reports",
+    "restored": "Restored successfully!",
+    "delete": "Delete",
+    "empty": "No flagged items in this section."
+  },
+
   "errors": {
     "foreign_job_blocked": "KaamXa is for jobs inside Nepal only. Foreign-employment or abroad job posts are strictly blocked.",
     "asks_money_blocked": "Posts that ask workers for registration fees, deposits, or advance payments are strictly prohibited.",
-    "rate_limit_jobs": "You have reached your daily limit for posting jobs (maximum 5 per day). Please try again tomorrow."
+    "rate_limit_jobs": "You have reached your daily limit for posting jobs (maximum 5 per day). Please try again tomorrow.",
+    "rate_limit_apps": "You have reached your daily limit for applications (maximum 30 per day).",
+    "generic": "Something went wrong. Please try again."
   }
 }

@@ -28,6 +28,7 @@ import {
   Send,
 } from 'lucide-react';
 import type { Database } from '@/types/database.types';
+import ReportModal from '@/components/common/ReportModal';
 
 type JobDetail = Database['public']['Tables']['jobs']['Row'] & {
   districts?: {
@@ -65,6 +66,7 @@ export default function JobDetailPage() {
   const [hasApplied, setHasApplied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     async function loadJob() {
@@ -229,14 +231,28 @@ export default function JobDetailPage() {
           <span>{t('jobs.all_jobs')}</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={handleShare}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-border bg-white text-xs font-bold text-brand-text hover:bg-gray-50 active:scale-95 transition-all shadow-2xs"
-        >
-          <Share2 className="w-3.5 h-3.5 text-primary" />
-          <span>{copied ? (language === 'ne' ? 'लिङ्क कपी भयो!' : 'Link Copied!') : t('jobs.share_job')}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-border bg-white text-xs font-bold text-brand-text hover:bg-gray-50 active:scale-95 transition-all shadow-2xs"
+          >
+            <Share2 className="w-3.5 h-3.5 text-primary" />
+            <span>{copied ? (language === 'ne' ? 'लिङ्क कपी भयो!' : 'Link Copied!') : t('jobs.share_job')}</span>
+          </button>
+
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-brand-border bg-white text-xs font-semibold text-red-600 hover:bg-red-50 active:scale-95 transition-all shadow-2xs"
+              title={t('jobs.report_job')}
+            >
+              <Flag className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t('reports.button')}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Details Card */}
@@ -429,6 +445,15 @@ export default function JobDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      <ReportModal
+        targetType="job"
+        targetId={job.id}
+        targetTitle={job.title}
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+      />
     </div>
   );
 }

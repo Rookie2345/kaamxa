@@ -19,6 +19,7 @@ import {
   FileText,
 } from 'lucide-react';
 import type { PayType } from '@/types/database.types';
+import QuestionBuilder, { ScreeningQuestionInput } from '@/components/jobs/QuestionBuilder';
 
 interface Province {
   id: number;
@@ -60,6 +61,7 @@ export default function PostJobPage() {
   const [negotiable, setNegotiable] = useState(false);
   const [positions, setPositions] = useState<number>(1);
   const [description, setDescription] = useState('');
+  const [questions, setQuestions] = useState<ScreeningQuestionInput[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -196,6 +198,46 @@ export default function PostJobPage() {
 
       if (error) {
         throw error;
+      }
+
+      if (data?.id && questions.length > 0) {
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          if (!q.question.trim()) continue;
+
+          const filteredOptions =
+            q.kind === 'mcq'
+              ? q.options.filter((opt) => opt.trim() !== '')
+              : null;
+
+          const { data: qData, error: qErr } = await supabase
+            .from('job_questions')
+            .insert({
+              job_id: data.id,
+              position: i + 1,
+              kind: q.kind,
+              question: q.question.trim(),
+              options: filteredOptions as any,
+            })
+            .select('id')
+            .single();
+
+          if (qErr) {
+            console.error('Error inserting question:', qErr);
+            continue;
+          }
+
+          if (q.kind === 'mcq' && qData?.id) {
+            const safeCorrectIndex = Math.min(
+              q.correctIndex,
+              (filteredOptions?.length || 1) - 1
+            );
+            await supabase.from('job_question_keys').insert({
+              question_id: qData.id,
+              correct_index: Math.max(0, safeCorrectIndex),
+            });
+          }
+        }
       }
 
       setSuccessMsg(t('post_job.success'));
@@ -509,6 +551,13 @@ export default function PostJobPage() {
               </div>
             </div>
           </div>
+
+          {/* Section 5: Optional Screening Builder */}
+          <QuestionBuilder
+            tradeSlug={tradeSlug}
+            questions={questions}
+            onChange={setQuestions}
+          />
 
           {/* Submit Action */}
           <div className="pt-4 border-t border-brand-border">

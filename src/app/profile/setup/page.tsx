@@ -6,7 +6,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { isValidNepaliPhone, cleanNepaliPhone } from '@/lib/utils/phone';
-import { UserCheck, AlertCircle, CheckCircle2, ChevronRight, Phone, MapPin, Wrench } from 'lucide-react';
+import { compressImage } from '@/lib/utils/image';
+import { UserCheck, AlertCircle, CheckCircle2, ChevronRight, Phone, MapPin, Wrench, Camera, Trash2, Plus } from 'lucide-react';
 
 interface Province {
   id: number;
@@ -91,8 +92,11 @@ export default function ProfileSetupPage() {
   const [selectedDistrictId, setSelectedDistrictId] = useState<number | ''>('');
   const [tole, setTole] = useState('');
   const [headline, setHeadline] = useState('');
+  const [bio, setBio] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [experienceYears, setExperienceYears] = useState<number | ''>('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -111,8 +115,10 @@ export default function ProfileSetupPage() {
     }
     if (workerDetails) {
       if (workerDetails.headline) setHeadline(workerDetails.headline);
+      if (workerDetails.bio) setBio(workerDetails.bio);
       if (workerDetails.skills) setSkills(workerDetails.skills);
       if (workerDetails.experience_years !== null) setExperienceYears(workerDetails.experience_years);
+      if (Array.isArray(workerDetails.photos)) setPhotos(workerDetails.photos);
     }
   }, [profile, contact, workerDetails]);
 
@@ -150,6 +156,45 @@ export default function ProfileSetupPage() {
     setSkills((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
     );
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !user) return;
+    if (photos.length >= 6) {
+      alert(language === 'ne' ? 'अधिकतम ६ वटा फोटो मात्र हाल्न मिल्छ।' : 'Maximum 6 photos allowed.');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const file = files[0];
+      const compressed = await compressImage(file, 1200, 0.8);
+      const filePath = `${user.id}/${Date.now()}.jpg`;
+
+      const { error } = await supabase.storage
+        .from('work-photos')
+        .upload(filePath, compressed, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('work-photos')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        setPhotos((prev) => [...prev, urlData.publicUrl]);
+      }
+    } catch (err: any) {
+      console.error('Photo upload error:', err);
+      alert('Photo upload failed: ' + (err.message || ''));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const removePhoto = (idx: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -218,15 +263,17 @@ export default function ProfileSetupPage() {
 
       if (contactError) throw contactError;
 
-      // 3. UPSERT worker_details table (skills, headline, experience_years)
+      // 3. UPSERT worker_details table (skills, headline, bio, experience_years, photos)
       const { error: workerError } = await supabase
         .from('worker_details')
         .upsert({
           user_id: user.id,
           headline: headline.trim() || null,
+          bio: bio.trim() || null,
           skills: skills,
           experience_years: experienceYears !== '' ? Number(experienceYears) : null,
           available: true,
+          photos: photos,
         });
 
       if (workerError) throw workerError;
@@ -463,6 +510,62 @@ export default function ProfileSetupPage() {
                   placeholder="जस्तै: 5"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary focus:outline-none text-sm min-h-[44px]"
                 />
+              </div>
+
+              {/* Bio / About */}
+              <div>
+                <label className="block text-xs font-bold text-brand-text uppercase mb-1">
+                  {t('profile_setup.bio')}
+                </label>
+                <textarea
+                  rows={3}
+                  maxLength={1000}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder={t('profile_setup.bio_placeholder')}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary focus:outline-none text-xs sm:text-sm resize-none"
+                ></textarea>
+                <div className="text-right text-[10px] text-brand-muted mt-1">
+                  {bio.length} / 1000
+                </div>
+              </div>
+
+              {/* Work Photos (Max 6) */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-brand-text uppercase">
+                  {t('workers.upload_photos')}
+                </label>
+
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {photos.map((url, i) => (
+                    <div key={i} className="aspect-square rounded-xl overflow-hidden border border-brand-border relative group">
+                      <img src={url} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-lg opacity-80 hover:opacity-100"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {photos.length < 6 && (
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-brand-border hover:border-primary flex flex-col items-center justify-center cursor-pointer transition-colors text-brand-muted hover:text-primary">
+                      <Camera className="w-5 h-5 mb-1" />
+                      <span className="text-[10px] font-bold">
+                        {uploadingPhoto ? '...' : '+ Add'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingPhoto}
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           </div>

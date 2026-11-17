@@ -172,6 +172,17 @@ export default function ProfilePage() {
       {/* Actions */}
       <div className="bg-white rounded-2xl border border-brand-border divide-y divide-brand-border shadow-sm overflow-hidden">
         <Link
+          href={`/workers/${user.id}`}
+          className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        >
+          <div className="flex items-center gap-3 text-sm font-semibold text-brand-text">
+            <UserIcon className="w-5 h-5 text-primary" />
+            <span>{language === 'ne' ? 'मेरो सार्वजनिक प्रोफाइल हेर्नुहोस्' : 'View Public Profile'}</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-brand-muted" />
+        </Link>
+
+        <Link
           href="/profile/setup"
           className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
         >
