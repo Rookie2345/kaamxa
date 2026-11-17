@@ -1,3 +1,5 @@
+import NepaliDate from 'nepali-date-converter';
+
 // Nepali Bikram Sambat (BS) and AD dual date utility
 
 const DEVANAGARI_DIGITS = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
@@ -31,25 +33,19 @@ export function formatDualDate(dateInput: string | Date | null | undefined): str
   const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   if (isNaN(date.getTime())) return '';
 
-  const adYear = date.getFullYear();
-  const adMonthIndex = date.getMonth();
-  const adDay = date.getDate();
+  try {
+    const nepaliDate = new NepaliDate(date);
+    const bsFormatted = nepaliDate.format('YYYY MMMM D', 'np');
 
-  // BS is approximately 56 years and 8 months ahead.
-  // Approx: mid-April is Baisakh 1
-  let bsYear = adYear + 57;
-  let bsMonthIndex = (adMonthIndex + 8) % 12;
-  if (adMonthIndex < 3 || (adMonthIndex === 3 && adDay < 14)) {
-    bsYear = adYear + 56;
+    const adDay = date.getDate();
+    const adMonth = ENGLISH_MONTHS[date.getMonth()];
+    const adYear = date.getFullYear();
+
+    return `${bsFormatted} (${adDay} ${adMonth} ${adYear})`;
+  } catch {
+    // Fallback in case of out of range dates
+    return date.toLocaleDateString();
   }
-
-  const bsMonthName = NEPALI_MONTHS[bsMonthIndex];
-  const bsDay = toDevanagariNumerals(adDay);
-  const bsYearStr = toDevanagariNumerals(bsYear);
-
-  const adFormatted = `${adDay} ${ENGLISH_MONTHS[adMonthIndex]} ${adYear}`;
-
-  return `${bsYearStr} ${bsMonthName} ${bsDay} (${adFormatted})`;
 }
 
 /**
