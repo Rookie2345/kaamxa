@@ -94,7 +94,6 @@ function LoginForm() {
         provider: 'google',
         options: {
           redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
-          skipBrowserRedirect: true,
         },
       });
 
@@ -103,33 +102,11 @@ function LoginForm() {
       }
 
       if (data?.url) {
-        // Pre-check if Supabase Google provider is enabled before window redirect
-        try {
-          const res = await fetch(data.url, { method: 'GET' });
-          if (!res.ok) {
-            const body = await res.json().catch(() => null);
-            if (
-              body?.msg?.includes('provider is not enabled') ||
-              body?.error_code === 'validation_failed'
-            ) {
-              throw new Error('PROVIDER_DISABLED');
-            }
-          }
-        } catch (fetchErr: any) {
-          if (fetchErr.message === 'PROVIDER_DISABLED') {
-            setShowGoogleGuide(true);
-            return;
-          }
-          // CORS redirects will throw on body read, which is expected when redirecting to accounts.google.com
-        }
-
-        // Navigate to Google OAuth
         window.location.href = data.url;
       }
     } catch (err: any) {
       console.error('Google login error:', err);
       if (
-        err?.message === 'PROVIDER_DISABLED' ||
         err?.message?.includes('provider is not enabled') ||
         err?.message?.includes('Unsupported provider')
       ) {
