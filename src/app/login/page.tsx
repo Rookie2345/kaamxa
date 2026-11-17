@@ -2,10 +2,22 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import { LogIn, UserPlus, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import {
+  LogIn,
+  UserPlus,
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  Copy,
+  Check,
+  X,
+  Shield,
+  HelpCircle,
+} from 'lucide-react';
 
 function LoginForm() {
   const { t, language } = useLanguage();
@@ -21,8 +33,11 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showGoogleGuide, setShowGoogleGuide] = useState(false);
+  const [copiedCallback, setCopiedCallback] = useState(false);
 
   const supabase = createClient();
+  const callbackUrl = 'https://rmuidbzztlcidisggclr.supabase.co/auth/v1/callback';
 
   // If already logged in, redirect
   useEffect(() => {
@@ -31,18 +46,39 @@ function LoginForm() {
     }
   }, [user, router, redirectUrl]);
 
-  // Check URL errors (e.g. from callback or hash)
+  // Check URL errors (both searchParams and hash fragments)
   useEffect(() => {
     const error = searchParams.get('error');
     const errorDesc = searchParams.get('error_description');
+
     if (errorDesc) {
-      setErrorMsg(decodeURIComponent(errorDesc));
+      const decoded = decodeURIComponent(errorDesc).replace(/\+/g, ' ');
+      if (decoded.includes('provider is not enabled') || decoded.includes('Unsupported provider')) {
+        setShowGoogleGuide(true);
+      } else {
+        setErrorMsg(decoded);
+      }
     } else if (error === 'auth_callback_failed') {
       setErrorMsg(
         language === 'ne'
-          ? 'लगइन प्रमाणीकरण असफल भयो। कृपया इमेल र पासवर्ड प्रयोग गर्नुहोस्।'
-          : 'Authentication callback failed. Please try signing in with Email & Password.'
+          ? 'लगइन प्रमाणीकरण पूरा हुन सकेन। कृपया पुनः प्रयास गर्नुहोस् वा इमेल प्रयोग गर्नुहोस्।'
+          : 'Authentication callback failed. Please try again or use Email & Password.'
       );
+    }
+
+    // Check hash for OAuth errors (Supabase passes errors in hash fragment on redirect)
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const hashError = params.get('error_description') || params.get('error');
+      if (hashError) {
+        const decoded = decodeURIComponent(hashError).replace(/\+/g, ' ');
+        if (decoded.includes('provider is not enabled') || decoded.includes('Unsupported provider')) {
+          setShowGoogleGuide(true);
+        } else {
+          setErrorMsg(decoded);
+        }
+      }
     }
   }, [searchParams, language]);
 
@@ -50,11 +86,15 @@ function LoginForm() {
     try {
       setLoading(true);
       setErrorMsg('');
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+
+      // Use the actual current browser origin (localhost or production domain)
+      const siteUrl = window.location.origin;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
+          skipBrowserRedirect: true,
         },
       });
 
@@ -63,27 +103,49 @@ function LoginForm() {
       }
 
       if (data?.url) {
+        // Pre-check if Supabase Google provider is enabled before window redirect
+        try {
+          const res = await fetch(data.url, { method: 'GET' });
+          if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            if (
+              body?.msg?.includes('provider is not enabled') ||
+              body?.error_code === 'validation_failed'
+            ) {
+              throw new Error('PROVIDER_DISABLED');
+            }
+          }
+        } catch (fetchErr: any) {
+          if (fetchErr.message === 'PROVIDER_DISABLED') {
+            setShowGoogleGuide(true);
+            return;
+          }
+          // CORS redirects will throw on body read, which is expected when redirecting to accounts.google.com
+        }
+
+        // Navigate to Google OAuth
         window.location.href = data.url;
       }
     } catch (err: any) {
       console.error('Google login error:', err);
-      const isUnconfigured =
+      if (
+        err?.message === 'PROVIDER_DISABLED' ||
         err?.message?.includes('provider is not enabled') ||
-        err?.message?.includes('Unsupported provider') ||
-        err?.status === 400;
-
-      if (isUnconfigured) {
-        setErrorMsg(
-          language === 'ne'
-            ? 'Google लगइन Supabase मा सक्रिय गरिएको छैन। कृपया तलको "नयाँ दर्ता" ट्याबमा गएर इमेल र पासवर्डबाट खाता बनाउनुहोस् वा लगइन गर्नुहोस्।'
-            : 'Google Sign-In is not enabled in your Supabase Auth settings. Please register or log in using Email & Password below.'
-        );
+        err?.message?.includes('Unsupported provider')
+      ) {
+        setShowGoogleGuide(true);
       } else {
         setErrorMsg(t('auth.auth_error') + (err.message || 'Failed to sign in with Google'));
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyCallback = async () => {
+    await navigator.clipboard.writeText(callbackUrl);
+    setCopiedCallback(true);
+    setTimeout(() => setCopiedCallback(false), 2500);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -264,10 +326,6 @@ function LoginForm() {
           <span>{loading ? t('auth.logging_in') : t('auth.btn_google')}</span>
         </button>
 
-        <p className="text-[11px] text-brand-muted text-center mt-2">
-          {t('auth.google_hint')}
-        </p>
-
         <div className="relative my-5 text-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-brand-border"></div>
@@ -360,6 +418,115 @@ function LoginForm() {
           </p>
         </div>
       </div>
+
+      {/* Google Setup Guidance Modal (Shown when Google OAuth is not yet toggled ON in Supabase) */}
+      {showGoogleGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl border border-brand-border p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  G
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-brand-text">
+                    {language === 'ne' ? 'Google लगइन सक्रिय गर्नुहोस्' : 'Enable Google Sign-In'}
+                  </h3>
+                  <p className="text-xs text-brand-muted">
+                    {language === 'ne' ? 'Supabase Dashboard मा २ मिनेटमा सेटअप गर्नुहोस्' : '2-minute setup in Supabase Dashboard'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoogleGuide(false)}
+                className="p-1 rounded-xl text-brand-muted hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-brand-text space-y-3 leading-relaxed">
+              <p className="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl font-medium">
+                {language === 'ne'
+                  ? 'Supabase ले Google लगइन सुरु गर्न Google Client ID र Secret माग्दछ। तलका ३ सजिला चरणहरू पूरा गर्नुहोस्:'
+                  : 'Supabase requires a Google Cloud Client ID & Secret to allow Google Sign-In. Follow these 3 quick steps:'}
+              </p>
+
+              <ol className="space-y-3 list-decimal list-inside pl-1 text-xs">
+                <li className="font-semibold text-brand-text">
+                  <span>
+                    {language === 'ne'
+                      ? 'Google Cloud Console मा जानुहोस् र OAuth Client ID (Web Application) बनाउनुहोस्:'
+                      : 'Go to Google Cloud Console and create an OAuth Client ID (Web Application):'}
+                  </span>
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary underline font-bold ml-1"
+                  >
+                    Google Cloud Credentials <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <div className="mt-1.5 p-2.5 rounded-xl bg-gray-50 border border-brand-border text-[11px] font-mono">
+                    <span className="block text-brand-muted font-sans font-medium mb-1">
+                      {language === 'ne' ? 'Authorized redirect URI मा यो हाल्नुहोस्:' : 'Add this as Authorized redirect URI:'}
+                    </span>
+                    <div className="flex items-center justify-between gap-2 bg-white p-1.5 rounded-lg border border-brand-border">
+                      <span className="truncate">{callbackUrl}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyCallback}
+                        className="px-2 py-1 rounded bg-primary text-white text-[10px] font-sans font-bold flex items-center gap-1 flex-shrink-0"
+                      >
+                        {copiedCallback ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedCallback ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+
+                <li className="font-semibold text-brand-text">
+                  <span>
+                    {language === 'ne'
+                      ? 'Supabase Dashboard को Google Provider खोल्नुहोस्:'
+                      : 'Open Supabase Dashboard Google Provider settings:'}
+                  </span>
+                  <a
+                    href="https://supabase.com/dashboard/project/rmuidbzztlcidisggclr/auth/providers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary underline font-bold ml-1"
+                  >
+                    Supabase Providers <ExternalLink className="w-3 h-3" />
+                  </a>
+                </li>
+
+                <li className="font-semibold text-brand-text">
+                  <span>
+                    {language === 'ne'
+                      ? 'Google Provider लाई ON गर्नुहोस् र Google बाट पाएको Client ID र Client Secret पेस्ट गरेर Save थिच्नुहोस्।'
+                      : 'Toggle Google to ON, paste the Client ID and Client Secret from Google, and click Save.'}
+                  </span>
+                </li>
+              </ol>
+            </div>
+
+            <div className="pt-2 border-t border-brand-border flex items-center justify-between">
+              <span className="text-[11px] text-brand-muted">
+                {language === 'ne' ? 'अहिले नै तुरुन्तै इमेलबाट लगइन गर्न सकिन्छ।' : 'Or use Email & Password below right away.'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowGoogleGuide(false)}
+                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover active:scale-95 transition-all shadow-xs"
+              >
+                {language === 'ne' ? 'बुझें, बन्द गर्नुहोस्' : 'Got it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

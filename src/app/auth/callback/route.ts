@@ -6,6 +6,23 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   const next = searchParams.get('next') || '/';
 
+  // Support reverse proxy headers on Render, Cloudflare, Docker
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin);
+
+  // Catch OAuth errors passed in query params
+  const errorParam = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
+  if (errorParam || errorDescription) {
+    const msg = errorDescription || errorParam || 'OAuth failed';
+    return NextResponse.redirect(
+      `${siteUrl}/login?error_description=${encodeURIComponent(msg)}`
+    );
+  }
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -20,13 +37,18 @@ export async function GET(request: Request) {
           .maybeSingle() as { data: { district_id: number | null } | null };
 
         if (!profile?.district_id) {
-          return NextResponse.redirect(`${origin}/profile/setup`);
+          return NextResponse.redirect(`${siteUrl}/profile/setup`);
         }
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${siteUrl}${next}`);
+    } else {
+      console.error('exchangeCodeForSession error:', error);
+      return NextResponse.redirect(
+        `${siteUrl}/login?error_description=${encodeURIComponent(error.message)}`
+      );
     }
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  // Return user to login page with instructions
+  return NextResponse.redirect(`${siteUrl}/login?error=auth_callback_failed`);
 }
