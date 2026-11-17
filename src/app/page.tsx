@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatDualDate } from '@/lib/utils/date';
+import { createClient } from '@/lib/supabase/client';
+import { JobCard } from '@/components/jobs/JobCard';
+import type { Database } from '@/types/database.types';
 import {
   Search,
   PlusCircle,
@@ -25,6 +29,18 @@ import {
   BookOpen,
   Laptop,
 } from 'lucide-react';
+
+type Job = Database['public']['Tables']['jobs']['Row'] & {
+  districts?: {
+    name_ne: string;
+    name_en: string;
+  } | null;
+  profiles?: {
+    full_name: string;
+    rating_avg: number;
+    rating_count: number;
+  } | null;
+};
 
 const TRADE_ICONS: Record<string, React.ReactNode> = {
   electrician: <Zap className="w-5 h-5 text-amber-500" />,
@@ -70,9 +86,55 @@ const TRADES_LIST = [
 
 export default function HomePage() {
   const { t, language } = useLanguage();
-  const { user, profile } = useAuth();
+  const router = useRouter();
+  const supabase = createClient();
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const currentDate = new Date();
+
+  useEffect(() => {
+    async function loadRecentJobs() {
+      try {
+        const { data } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            districts (
+              name_ne,
+              name_en
+            ),
+            profiles:employer_id (
+              full_name,
+              rating_avg,
+              rating_count
+            )
+          `)
+          .eq('status', 'open')
+          .eq('is_hidden', false)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (data) {
+          setRecentJobs(data as any);
+        }
+      } catch (err) {
+        console.error('Error loading recent jobs:', err);
+      }
+    }
+
+    loadRecentJobs();
+  }, [supabase]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/jobs?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/jobs');
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -102,7 +164,7 @@ export default function HomePage() {
           </p>
 
           {/* Search Box */}
-          <div className="mt-5 sm:mt-6">
+          <form onSubmit={handleSearch} className="mt-5 sm:mt-6">
             <div className="relative flex items-center">
               <Search className="w-5 h-5 text-brand-muted absolute left-4 pointer-events-none" />
               <input
@@ -113,13 +175,13 @@ export default function HomePage() {
                 className="w-full pl-11 pr-24 py-3.5 rounded-2xl border-2 border-primary/20 bg-white focus:outline-none focus:border-primary text-sm shadow-sm min-h-[50px]"
               />
               <button
-                type="button"
+                type="submit"
                 className="absolute right-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-bold text-xs rounded-xl shadow-xs active:scale-95 transition-all"
               >
                 {t('common.search')}
               </button>
             </div>
-          </div>
+          </form>
 
           {/* Quick CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
@@ -132,11 +194,11 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="#trades"
+              href="/jobs"
               className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-brand-border text-brand-text font-bold text-sm px-5 py-3.5 rounded-xl shadow-xs active:scale-98 transition-all min-h-[48px]"
             >
               <Briefcase className="w-5 h-5 text-primary" />
-              <span>{t('home.browse_trades')}</span>
+              <span>{t('jobs.all_jobs')}</span>
             </Link>
           </div>
         </div>
@@ -149,6 +211,30 @@ export default function HomePage() {
           {t('common.safety_warning')}
         </p>
       </div>
+
+      {/* Recent Jobs (if any exist) */}
+      {recentJobs.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl font-bold text-brand-text">
+              {t('home.recent_jobs')}
+            </h2>
+            <Link
+              href="/jobs"
+              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <span>{t('jobs.all_jobs')}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {recentJobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Trades Grid */}
       <div id="trades" className="space-y-4">
