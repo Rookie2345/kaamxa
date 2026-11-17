@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #1F7A4D;
+  --primary-hover: #18633E;
+  --accent: #F28C28;
+  --accent-hover: #DA7517;
+  --bg: #FAFAF7;
+  --text: #1C1C1C;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Ensure mobile tap targets are large enough and don't double-tap zoom on quick taps */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Custom scrollbar for desktop */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1ed;
+}
+::-webkit-scrollbar-thumb {
+  background: #c9c9c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a89f;
+}
